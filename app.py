@@ -369,9 +369,12 @@ def _populate_cafes_from_nominatim(query: str, db: Session) -> list[Cafe]:
     HTML route) or return a 503 envelope (the JSON API).
     """
     try:
+        # Prefix with "cafes near" so Nominatim's special-phrase handling
+        # returns cafes near the location, not the location itself.
+        search_query = query if query.lower().startswith("cafes ") else f"cafes near {query}"
         response = requests.get(
             NOMINATIM_URL,
-            params={"q": query, "format": "json"},
+            params={"q": search_query, "format": "json"},
             headers={"User-Agent": NOMINATIM_USER_AGENT},
             timeout=NOMINATIM_TIMEOUT_SECONDS,
         )
@@ -404,6 +407,10 @@ def _populate_cafes_from_nominatim(query: str, db: Session) -> list[Cafe]:
             lon = float(entry["lon"])
         except (KeyError, TypeError, ValueError):
             # Skip malformed entries rather than failing the whole search.
+            continue
+
+        # Safety belt: skip results that aren't actually cafes.
+        if entry.get("class") != "amenity" or entry.get("type") != "cafe":
             continue
 
         existing = db.exec(select(Cafe).where(Cafe.osm_id == osm_id)).first()
