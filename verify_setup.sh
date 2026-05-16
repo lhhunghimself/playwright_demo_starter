@@ -17,6 +17,17 @@ set -eo pipefail
 DEMO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DEMO_DIR"
 
+# Find a python binary — Ubuntu 20.04+ and several other distros only ship
+# `python3`, not `python`. Prefer python3 if available; fall back to python.
+if command -v python3 >/dev/null 2>&1; then
+    PYTHON=python3
+elif command -v python >/dev/null 2>&1; then
+    PYTHON=python
+else
+    echo "FAIL: neither python3 nor python in PATH" >&2
+    exit 1
+fi
+
 # Remember which branch/commit we were on so we can restore at the end
 ORIGINAL_REF=$(git rev-parse --abbrev-ref HEAD)
 if [ "$ORIGINAL_REF" = "HEAD" ]; then
@@ -31,7 +42,7 @@ trap cleanup EXIT
 run_and_expect_pass() {
     local LABEL="$1"
     local OUTPUT
-    if OUTPUT=$(python -m pytest tests/e2e/test_search_for_cafes.py -v 2>&1); then
+    if OUTPUT=$($PYTHON -m pytest tests/e2e/test_search_for_cafes.py -v 2>&1); then
         echo "    $LABEL: PASS"
     else
         echo "    $LABEL: did not pass — aborting"
@@ -43,7 +54,7 @@ run_and_expect_pass() {
 run_and_expect_fail() {
     local LABEL="$1"
     local OUTPUT
-    if OUTPUT=$(python -m pytest tests/e2e/test_search_for_cafes.py -v 2>&1); then
+    if OUTPUT=$($PYTHON -m pytest tests/e2e/test_search_for_cafes.py -v 2>&1); then
         echo "    $LABEL: test passed against buggy code — assertions are too loose"
         echo "$OUTPUT" | tail -10
         exit 1
@@ -59,9 +70,9 @@ run_and_expect_fail() {
 }
 
 echo "==> Checking playwright + chromium..."
-python -m playwright --version >/dev/null || {
+$PYTHON -m playwright --version >/dev/null || {
     echo "FAIL: playwright not installed."
-    echo "Run: pip install -r requirements.txt && python -m playwright install chromium"
+    echo "Run: pip install -r requirements.txt && $PYTHON -m playwright install chromium"
     exit 1
 }
 echo "    OK"
