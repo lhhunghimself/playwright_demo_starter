@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Edit your rating — StudySpot{% endblock %}
+
+{% set ALL_TAGS = ['wifi', 'outlets', 'quiet', 'late_hours', 'seating', 'outdoor'] %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <h1 class="h3 mb-3">Edit your rating of {{ cafe.name }}</h1>
+        <p class="text-muted small mb-4">{{ cafe.address }}</p>
+
+        <form method="POST" action="/cafes/{{ cafe.id }}/edit-rating">
+
+            <div class="mb-3">
+                <label for="edit-stars" class="form-label">Stars (1–5)</label>
+                <input
+                    type="number"
+                    id="edit-stars"
+                    name="stars"
+                    class="form-control"
+                    min="1"
+                    max="5"
+                    step="1"
+                    value="{{ rating.stars }}"
+                    required>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-label mb-2">Tags</div>
+                <div class="d-flex flex-wrap gap-3">
+                    {% for tag in ALL_TAGS %}
+                    <div class="form-check">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            name="tags"
+                            value="{{ tag }}"
+                            id="edit-tag-{{ tag }}"
+                            {% if tag in rating.tags %}checked{% endif %}>
+                        <label class="form-check-label" for="edit-tag-{{ tag }}">
+                            {{ tag.replace('_', ' ') | capitalize }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="edit-review" class="form-label">Review (optional)</label>
+                <textarea
+                    id="edit-review"
+                    name="review"
+                    class="form-control"
+                    rows="3"
+                    placeholder="What was it like to study here?">{{ rating.review or "" }}</textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a class="btn btn-secondary"
+                   href="{{ url_for('cafe_detail', cafe_id=cafe.id) }}">
+                    Cancel
+                </a>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}

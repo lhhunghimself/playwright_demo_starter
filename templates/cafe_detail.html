@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}{{ cafe.name }} — StudySpot{% endblock %}
+
+{% set ALL_TAGS = ['wifi', 'outlets', 'quiet', 'late_hours', 'seating', 'outdoor'] %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+
+        {# ---- Cafe header ---------------------------------------------- #}
+        <div class="mb-3">
+            <p class="mb-1">
+                <a href="{{ url_for('cafes_list') }}" class="text-decoration-none small">
+                    &larr; Back to cafes
+                </a>
+            </p>
+            <h1 class="h3 mb-1">{{ cafe.name }}</h1>
+            <p class="text-muted mb-2">{{ cafe.address }}</p>
+
+            <p class="mb-2">
+                {% if avg_stars is not none %}
+                    <span class="fw-semibold">{{ "%.1f"|format(avg_stars) }}</span>
+                    <span class="text-muted">/ 5</span>
+                    <span class="text-muted small">
+                        ({{ ratings|length }} rating{{ '' if ratings|length == 1 else 's' }})
+                    </span>
+                {% else %}
+                    <span class="text-muted small">No ratings yet</span>
+                {% endif %}
+            </p>
+
+            {% if tag_union %}
+            <div class="mb-2">
+                {% for tag in tag_union %}
+                <span class="badge bg-info text-dark me-1">
+                    {{ tag.replace('_', ' ') }}
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <hr>
+
+        {# ---- Rate form (or auth-state messaging) ---------------------- #}
+        <div class="mb-4">
+            {% if current_user.is_authenticated %}
+                {% if current_user_rating %}
+                <div class="alert alert-light border">
+                    You already rated this cafe —
+                    <a href="{{ url_for('edit_rating', cafe_id=cafe.id) }}">edit it?</a>
+                </div>
+                {% else %}
+                <div class="card card-body bg-light">
+                    <h2 class="h5 mb-3">Rate this cafe</h2>
+                    <form action="{{ url_for('rate_cafe', cafe_id=cafe.id) }}" method="POST">
+                        <div class="mb-3">
+                            <label for="rate-stars" class="form-label">Stars (1–5)</label>
+                            <input
+                                type="number"
+                                id="rate-stars"
+                                name="stars"
+                                class="form-control"
+                                min="1"
+                                max="5"
+                                step="1"
+                                required>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-label mb-2">Tags</div>
+                            <div class="d-flex flex-wrap gap-3">
+                                {% for tag in ALL_TAGS %}
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="tags"
+                                        value="{{ tag }}"
+                                        id="rate-tag-{{ tag }}">
+                                    <label class="form-check-label" for="rate-tag-{{ tag }}">
+                                        {{ tag.replace('_', ' ') | capitalize }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="rate-review" class="form-label">Review (optional)</label>
+                            <textarea
+                                id="rate-review"
+                                name="review"
+                                class="form-control"
+                                rows="3"
+                                placeholder="What was it like to study here?"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Submit rating</button>
+                    </form>
+                </div>
+                {% endif %}
+            {% else %}
+            <div class="alert alert-light border">
+                <a href="{{ url_for('login') }}">Log in</a> to rate this cafe.
+            </div>
+            {% endif %}
+        </div>
+
+        {# ---- Ratings list --------------------------------------------- #}
+        <h2 class="h5 mb-3">Recent ratings</h2>
+        {% if ratings %}
+        <div class="list-group mb-4">
+            {% for rating in ratings %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="me-3">
+                        <strong>{{ usernames.get(rating.user_id, '?') }}</strong>
+                        <span class="text-muted small ms-2">
+                            {{ rating.stars }} / 5
+                        </span>
+                    </div>
+                    {% if current_user.is_authenticated and rating.user_id == current_user.id %}
+                    <div class="text-nowrap">
+                        <a href="{{ url_for('edit_rating', cafe_id=cafe.id) }}"
+                           class="btn btn-link btn-sm p-0 me-2">
+                            Edit
+                        </a>
+                        <form method="POST"
+                              action="{{ url_for('delete_rating', cafe_id=cafe.id) }}"
+                              class="d-inline"
+                              onsubmit="return confirm('Delete this rating?');">
+                            <button type="submit" class="btn btn-link btn-sm text-danger p-0">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if rating.review %}
+                <p class="mb-2 mt-2">{{ rating.review }}</p>
+                {% endif %}
+
+                {% if rating.tags %}
+                <div>
+                    {% for t in rating.tags %}
+                    <span class="badge bg-secondary me-1">{{ t.replace('_', ' ') }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">No ratings yet — be the first to rate this cafe.</p>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}
